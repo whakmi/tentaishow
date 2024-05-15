@@ -12,9 +12,9 @@ def genimage(width, height, outgrid):
     draw = ImageDraw.Draw(outimg)
     draw.rectangle((5, 5, (imgwidth-6), (imgheight-6)), fill=(255, 255, 255))
     for i in range(1,width):
-        draw.rectangle(((50*i + 4), 5, (50*i + 5), (imgwidth - 6)), fill=(219, 219, 219))
+        draw.rectangle(((50*i + 4), 5, (50*i + 5), (imgheight - 6)), fill=(219, 219, 219))
     for i in range(1,height):
-        draw.rectangle((5, (50*i + 4), (imgheight - 6), (50*i + 5)), fill=(219, 219, 219))
+        draw.rectangle((5, (50*i + 4), (imgwidth - 6), (50*i + 5)), fill=(219, 219, 219))
     cellpointer = 0
     for i in range(0, height):
         for j in range(0, width):
@@ -574,7 +574,7 @@ jaoderneinalnum = ""
 for char in jaodernein:
     if char.isalnum:
         jaoderneinalnum = jaoderneinalnum + char
-if jaoderneinalnum.lower() == "y" or "yes" or "sure" or "ja" or "ya" or "yeah" or "1" or "absolutely" or "ok" or "okay" or "alright" or "alrighty" or "allright" or "alrighty then" or "wile" or "indeed" or "ofcourse" or "affirmative" or "certainly" or "definitely" or "ye" or "yea" or "aye" or "ayeaye" or "yesh" or "surething" or "yeahman" or "suredude" or "yeahdude" or "sureman" or "yeahmate" or "suremate" or "okiedokie" or "mhm" or "uhhuh" or "isuredo" or "suredo" or "naturally" or "yep" or "yup" or "yeppers" or "makeitso" or "naturally" or "oui" or "rightyho" or "iguess" or "iguessso" or "yass" or "soundsgood" or "thatsoundsgood" or "hellyeah" or "hellyes" or "heckyeah" or "heckyes" or "verywell" or "verywellthen" or "duh" or "duhh" or "duhhh":
+if jaoderneinalnum.lower() == "y" or jaoderneinalnum == "yes" or jaoderneinalnum == "sure" or jaoderneinalnum == "ja" or jaoderneinalnum == "ya" or jaoderneinalnum == "yeah" or jaoderneinalnum == "1" or jaoderneinalnum == "absolutely" or jaoderneinalnum == "ok" or jaoderneinalnum == "okay" or jaoderneinalnum == "alright" or jaoderneinalnum == "alrighty" or jaoderneinalnum == "allright" or jaoderneinalnum == "alrighty then" or jaoderneinalnum == "wile" or jaoderneinalnum == "indeed" or jaoderneinalnum == "ofcourse" or jaoderneinalnum == "affirmative" or jaoderneinalnum == "certainly" or jaoderneinalnum == "definitely" or jaoderneinalnum == "ye" or jaoderneinalnum == "yea" or jaoderneinalnum == "aye" or jaoderneinalnum == "ayeaye" or jaoderneinalnum == "yesh" or jaoderneinalnum == "surething" or jaoderneinalnum == "yeahman" or jaoderneinalnum == "suredude" or jaoderneinalnum == "yeahdude" or jaoderneinalnum == "sureman" or jaoderneinalnum == "yeahmate" or jaoderneinalnum == "suremate" or jaoderneinalnum == "okiedokie" or jaoderneinalnum == "mhm" or jaoderneinalnum == "uhhuh" or jaoderneinalnum == "isuredo" or jaoderneinalnum == "suredo" or jaoderneinalnum == "naturally" or jaoderneinalnum == "yep" or jaoderneinalnum == "yup" or jaoderneinalnum == "yeppers" or jaoderneinalnum == "makeitso" or jaoderneinalnum == "naturally" or jaoderneinalnum == "oui" or jaoderneinalnum == "rightyho" or jaoderneinalnum == "iguess" or jaoderneinalnum == "iguessso" or jaoderneinalnum == "yass" or jaoderneinalnum == "soundsgood" or jaoderneinalnum == "thatsoundsgood" or jaoderneinalnum == "hellyeah" or jaoderneinalnum == "hellyes" or jaoderneinalnum == "heckyeah" or jaoderneinalnum == "heckyes" or jaoderneinalnum == "verywell" or jaoderneinalnum == "verywellthen" or jaoderneinalnum == "duh" or jaoderneinalnum == "duhh" or jaoderneinalnum == "duhhh":
     genimage(width, height, outgrid)
     print("Saved!")
 else:

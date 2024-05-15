@@ -10,9 +10,11 @@ Pretend this is the pattern you'd like to generate —
 Run tentai_show_maker.py (and make sure PIL is available if you're generating an image).
 The pattern is five squares wide and three tall, so input "5x3" when prompted.
 Now convert each white square to a 1 and each black square to a 0 —
+```
 11101
 01110
 01001
+```
 Remove all newlines ("111010111001001"), and feed it in as prompted.
 After that, the program's output might say something like:
 ```

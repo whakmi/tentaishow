@@ -1,4 +1,3 @@
-```
 I sure could make an image input handler in the future, but currently, here's how you use the tentai show puzzle generator:
 ██ = white square
 ░░ = black square
@@ -26,4 +25,3 @@ d = dot on the bottom right corner
 To generate an image from the notation, give an affirmative when prompted. If you accidentally say no, rip out the genimage() function from the file and DIY.
 
 This code is stochastic and it sucks; please keep this in mind as you run into errors every other time you use it :3
-```

@@ -33,3 +33,4 @@ d = dot on the bottom right corner
 To generate an image from the notation, give an affirmative when prompted. If you accidentally say no, rip out the genimage() function from the file and DIY.
 
 As of May 15, 2024, this code is irrevocably broken and doesn't seem to generate valid games most of the time. Hopefully this will change.
+As of May 16, 2024, the generator seems to make valid puzzles all the time, but they sometimes aren't very good ones. Hopefully this will change.

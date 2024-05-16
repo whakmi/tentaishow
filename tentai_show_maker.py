@@ -345,18 +345,11 @@ def placegalaxy():                              # places a "good" galaxy dot wit
     galaxymapticker += 1
     for pointer in rcl:
         regionfill(pointer)
-    print("Regions:")               # uncomment if you want to print initial region fills
-    for i in range(0, height):
-        for j in range(0, width):
-            outnum = regionsgrid[i*width+j]
-            print("{:02d}".format(outnum), end=" ")
-        print()
-    print()
     return 0                            # ...and get out
 
 dimensions = "0x0"
 while dimensions == "0x0":
-    dimensions = "9x9"
+    dimensions = input("Input the dimensions of the puzzle (e.g. 15x5): ")
     invalid = 0
     heightswitch = 0
     widthstr = ""
@@ -386,7 +379,7 @@ area = width * height
 grid = []
 while grid == []:
     print("Input the grid as a continuous string of", area, "1s and 0s:")
-    rawgrid = "111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+    rawgrid = input("")
     invalid = 0
     i = 0
     for char in rawgrid:

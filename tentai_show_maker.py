@@ -166,183 +166,116 @@ def getregionalcells(targetregion):             # stuffs all cells in a specifie
         cell += 1
 
 def placegalaxy():                              # places a "good" galaxy dot within the current bounds of rcl
-    """
-    steps in placing a good, big galaxy:
-    1) assign a score to every possible dot position in the region based on how big the largest galaxy placed there could be
-    2) pick the dot with the highest score, or one within about 60% of that score at random
-    3) begin laying down valid cells for the galaxy to occupy
-    4) stop laying cells if the galaxy takes up more than 18% of the puzzle
-    5) maybe stop laying cells randomly when the galaxy comes within about 30% of its maximum possible size (if step 4 not triggered)
-    """
-    dotplacementscores = []
-    """
-    the dotplacementscores list:
-    for every possible dot placement in the region, this list gives how big a galaxy placed there could be.
-    [1st cell center score, 1st cell right edge, 1st cell below edge, 1st cell diagonal below-right corner, 2nd cell center...]
-    a score of -1 means that the placement was invalid
-    we don't actually check for whether the dot could reach all the squares in practice, and it speeds up computation a ton
-    """
+    validdotslist = []
     global outgrid
     global galaxymapticker
     global galaxymap
     for focuscell in rcl:
-        dottype = "c"
-        dotscore = 0
-        for chkcell in rcl:
-            if genreflection(focuscell, dottype, chkcell) != -1:
-                dotscore += 1
-        dotplacementscores.append(dotscore)
-        dottype = "r"
-        dotscore = 0
-        if (focuscell+1) % width != 0 and regionsgrid[focuscell] == regionsgrid[focuscell+1]:
-            for chkcell in rcl:
-                if genreflection(focuscell, dottype, chkcell) != -1:
-                    dotscore += 1
-            dotplacementscores.append(dotscore)
-        else:
-            dotplacementscores.append(-1)
-        dottype = "b"
-        dotscore = 0
-        if focuscell+width < area and regionsgrid[focuscell] == regionsgrid[focuscell+width]:
-            for chkcell in rcl:
-                if genreflection(focuscell, dottype, chkcell) != -1:
-                    dotscore += 1
-            dotplacementscores.append(dotscore)
-        else:
-            dotplacementscores.append(-1)
-        dottype = "d"
-        dotscore = 0
+        validdotslist.append(4*focuscell)               # center placements are always valid
+        if focuscell+1 < area and (focuscell+1) % width != 0 and regionsgrid[focuscell] == regionsgrid[focuscell+1]:
+            validdotslist.append(4*focuscell + 1)       # get "r" placement validity
+        if focuscell+width < area and regionsgrid[focuscell] == regionsgrid[focuscell+width]:  
+            validdotslist.append(4*focuscell + 2)       # get "b" placement validity
         if (focuscell+1) % width != 0 and focuscell+width+1 < area and regionsgrid[focuscell] == regionsgrid[focuscell+1] and regionsgrid[focuscell] == regionsgrid[focuscell+width] and regionsgrid[focuscell] == regionsgrid[focuscell+width+1]:
-            for chkcell in rcl:
-                if genreflection(focuscell, dottype, chkcell) != -1:
-                    dotscore += 1
-            dotplacementscores.append(dotscore)
+            validdotslist.append(4*focuscell + 3)       # get "d" placement validity
+    # now that we have scores for all placements, pick some number of candidates at random.
+    # the default is 15, but can be increased to optimize for bigger galaxies
+    # rewrite everything below this, hehe
+    dotcandidates = []
+    for i in range(0, 15):
+        dotcandidates.append(random.choice(validdotslist))
+    # the dot's location is given by integer division by 4, and the type is given by a modulo 4 operation
+    winninggalaxycells = []
+    for dotcandidate in dotcandidates:
+        galaxybuffercells = []                  # the galaxy currently being generated is stored in galaxybuffer
+        dotloc = dotcandidate // 4
+        galaxybuffercells.append(dotloc)
+        if dotcandidate % 4 == 0:
+            dottype = "c"
+            galaxysize = 1
+        elif dotcandidate % 4 == 1:
+            dottype = "r"
+            galaxybuffercells.append(dotloc+1)
+            galaxysize = 2
+        elif dotcandidate % 4 == 2:
+            dottype = "b"
+            galaxybuffercells.append(dotloc+width)
+            galaxysize = 2
         else:
-            dotplacementscores.append(-1)
-    # now that we have scores for all placements, pick a candidate at random
-    maxscore = max(dotplacementscores)
-    numcandidates = 0
-    for dotscore in dotplacementscores:
-        if dotscore >= 0.3 * maxscore:
-            numcandidates += 1
-    dotchoicecountdown = random.randrange(0, numcandidates)
-    listticker = 0
-    for dotscore in dotplacementscores:
-        if dotscore >= 0.3 * maxscore:
-            if dotchoicecountdown == 0:
-                dotcellchoice = rcl[listticker//4]
-                if listticker % 4 == 0:
-                    dottypechoice = "c"
-                elif listticker % 4 == 1:
-                    dottypechoice = "r"
-                elif listticker % 4 == 2:
-                    dottypechoice = "b"
+            dottype = "d"
+            galaxybuffercells.append(dotloc+1)
+            galaxybuffercells.append(dotloc+width)
+            galaxybuffercells.append(dotloc+width+1)
+            galaxysize = 4
+        # generate a galaxy for the dotcandidate
+        expattempts = 0
+        validexpansion = 0
+        stopgen = 0
+        while stopgen == 0:
+            seedcell = random.choice(galaxybuffercells)     # choose a cell to try and expand from
+            expanddir = random.randrange(0,4)               # choose a direction to try and expand to (0L, 1R, 2U, 3D)
+            if expanddir == 0:                              # these secondary & tertiary "if" lines make sure expandcell is valid
+                expandcell = seedcell - 1
+                if seedcell % width != 0 and expandcell >= 0:
+                    if regionsgrid[expandcell] == regionsgrid[seedcell]:
+                        validexpansion = 1
+            elif expanddir == 1:
+                expandcell = seedcell + 1
+                if expandcell % width != 0 and expandcell < width:
+                    if regionsgrid[expandcell] == regionsgrid[seedcell]:
+                        validexpansion = 1
+            elif expanddir == 2:
+                expandcell = seedcell - width
+                if expandcell >= 0 and seedcell >= width:
+                    if regionsgrid[expandcell] == regionsgrid[seedcell]:
+                        validexpansion = 1
+            else:
+                expandcell = seedcell + width
+                if expandcell < area:
+                    if regionsgrid[expandcell] == regionsgrid[seedcell]:
+                        validexpansion = 1
+            if expandcell in galaxybuffercells:
+                validexpansion = 0                          # don't expand into a cell that the galaxy already owns
+            if validexpansion == 1:
+                expansionrefl = genreflection(dotloc, dottype, expandcell)
+                if expansionrefl == -1:                     # now perform similar checks on the cell opposite the dot
+                    validexpansion = 0
                 else:
-                    dottypechoice = "d"
-                maxgalaxyarea = dotscore
-                # print("chose to put", dottypechoice, "on", dotcellchoice, "with dotscore", dotscore)
-            dotchoicecountdown -= 1
-        listticker += 1
-    # time to generate the galaxy — after every cell extension, we'll do checks to make sure the galaxy still looks good
-    galaxycells = []
-    galaxycells.append(dotcellchoice)
-    if dottypechoice == "c":
-        if grid[dotcellchoice] == 0:
-            outgrid[dotcellchoice] = "c"
-        else:
-            outgrid[dotcellchoice] = "C"
-    if dottypechoice == "r":
-        galaxycells.append(dotcellchoice+1)
-        if grid[dotcellchoice] == 0:
-            outgrid[dotcellchoice] = "r"
-        else:
-            outgrid[dotcellchoice] = "R"
-        outgrid[dotcellchoice+1] = "."
-    if dottypechoice == "b":
-        galaxycells.append(dotcellchoice+width)
-        if grid[dotcellchoice] == 0:
-            outgrid[dotcellchoice] = "b"
-        else:
-            outgrid[dotcellchoice] = "B"
-        outgrid[dotcellchoice+width] = "."
-    if dottypechoice == "d":
-        galaxycells.append(dotcellchoice+1)
-        galaxycells.append(dotcellchoice+width)
-        galaxycells.append(dotcellchoice+width+1)
-        if grid[dotcellchoice] == 0:
-            outgrid[dotcellchoice] = "d"
-        else:
-            outgrid[dotcellchoice] = "D"
-        outgrid[dotcellchoice+1] = "."
-        outgrid[dotcellchoice+width] = "."
-        outgrid[dotcellchoice+width+1] = "."
-    breakgalaxygen = 0
-    if maxgalaxyarea == len(galaxycells):
-        breakgalaxygen = 1
-    emergencybreak = 0
-    while breakgalaxygen == 0:
-        successfulexpansion = 0
-        randdir = random.randrange(0, 4)  # 0 is left, 1 is right, 2 is up, 3 is down
-        seedcell = random.choice(galaxycells)
-        if randdir == 0:
-            expansioncell = seedcell - 1
-            if regionsgrid[seedcell] == regionsgrid[expansioncell] and seedcell % width != 0 and outgrid[expansioncell] == "X":
-                expansioncellreflection = genreflection(dotcellchoice, dottypechoice, expansioncell)
-                if outgrid[expansioncellreflection] == "X" and regionsgrid[expansioncellreflection] == regionsgrid[dotcellchoice]:
-                    outgrid[expansioncell] = "."
-                    galaxycells.append(expansioncell)
-                    outgrid[expansioncellreflection] = "."
-                    galaxycells.append(expansioncellreflection)
-                    successfulexpansion = 1
-        elif randdir == 1:
-            expansioncell = seedcell + 1
-            if expansioncell < area:
-                if regionsgrid[seedcell] == regionsgrid[expansioncell] and expansioncell % width != 0 and outgrid[expansioncell] == "X":
-                    expansioncellreflection = genreflection(dotcellchoice, dottypechoice, expansioncell)
-                    if outgrid[expansioncellreflection] == "X" and regionsgrid[expansioncellreflection] == regionsgrid[dotcellchoice]:
-                        outgrid[expansioncell] = "."
-                        galaxycells.append(expansioncell)
-                        outgrid[expansioncellreflection] = "."
-                        galaxycells.append(expansioncellreflection)
-                        successfulexpansion = 1
-        elif randdir == 2:
-            expansioncell = seedcell - width
-            if expansioncell >= 0 and regionsgrid[seedcell] == regionsgrid[expansioncell] and outgrid[expansioncell] == "X":
-                expansioncellreflection = genreflection(dotcellchoice, dottypechoice, expansioncell)
-                if outgrid[expansioncellreflection] == "X" and regionsgrid[expansioncellreflection] == regionsgrid[dotcellchoice]:
-                    outgrid[expansioncell] = "."
-                    galaxycells.append(expansioncell)
-                    outgrid[expansioncellreflection] = "."
-                    galaxycells.append(expansioncellreflection)
-                    successfulexpansion = 1
-        else:
-            expansioncell = seedcell + width
-            if expansioncell < area and regionsgrid[seedcell] == regionsgrid[expansioncell] and outgrid[expansioncell] == "X":
-                expansioncellreflection = genreflection(dotcellchoice, dottypechoice, expansioncell)
-                if outgrid[expansioncellreflection] == "X" and regionsgrid[expansioncellreflection] == regionsgrid[dotcellchoice]:
-                    outgrid[expansioncell] = "."
-                    galaxycells.append(expansioncell)
-                    outgrid[expansioncellreflection] = "."
-                    galaxycells.append(expansioncellreflection)
-                    successfulexpansion = 1
-        emergencybreak += 1
-        if emergencybreak > 1000:
-            breakgalaxygen = 1
-        if successfulexpansion == 1:    # do our checks...
-            if 0.18 * area < len(galaxycells):
-                breakgalaxygen = 1
-            if 0.8 * maxgalaxyarea <= len(galaxycells) and random.random() < 0.15:
-                breakgalaxygen = 1
-    for pointer in rcl:                 # ...update the regions grid...
-        if outgrid[pointer] == "X":
-            regionsgrid[pointer] = 0
-        else:
-            regionsgrid[pointer] = -1
-            galaxymap[pointer] = galaxymapticker
+                    if regionsgrid[expansionrefl] != regionsgrid[seedcell] or galaxymap[expansionrefl] != galaxymap[seedcell]:
+                        validexpansion = 0
+            if expandcell >= area:
+                validexpansion = 0
+            if validexpansion == 1:
+                galaxybuffercells.append(expandcell)
+                galaxybuffercells.append(expansionrefl)
+                galaxysize = len(galaxybuffercells)
+            expattempts += 1
+            if galaxysize >= 0.18 * area or expattempts >= 800:
+                stopgen = 1
+                expattempts = 0
+        # if the galaxy we just generated is bigger than the current winning galaxy, it will overwrite the previous one
+        if galaxysize > len(winninggalaxycells):
+            winninggalaxycells = galaxybuffercells
+            winninggalaxyloc = dotloc
+            winninggalaxytype = dottype
+    # after getting our winning galaxy, put it into effect
+    for cell in winninggalaxycells:
+        regionsgrid[cell] = -1
+        galaxymap[cell] = galaxymapticker
+        outgrid[cell] = "."
     galaxymapticker += 1
-    for pointer in rcl:
-        regionfill(pointer)
-    return 0                            # ...and get out
+    if grid[winninggalaxyloc] == 0:
+        outgrid[winninggalaxyloc] = winninggalaxytype
+    else:
+        outgrid[winninggalaxyloc] = winninggalaxytype.capitalize()
+    # regenerate regions for whatever region we just punched a hole in
+    for cell in rcl:
+        if regionsgrid[cell] != -1:
+            regionsgrid[cell] = 0
+    for cell in rcl:
+        if regionsgrid[cell] == 0:
+            regionfill(cell)
+    return 0
 
 dimensions = "0x0"
 while dimensions == "0x0":
@@ -614,6 +547,7 @@ for i in range(0, height):
         outchar = outgrid[i*width+j]
         print(outchar, end="")
     print()
+
 jaodernein = input("Want a copy of the grid as an image? (It will be saved to the same folder as this program.) Y/N: ")
 jaoderneinalnum = ""
 for char in jaodernein:

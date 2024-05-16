@@ -127,27 +127,24 @@ def singledoubleelim():                         # finds all regions of 1 or 2 ce
     return 0
 
 def genreflection(dotlocation, dottype, focuscell):
-    horiztweener = 0
-    vertitweener = 0
+    tweener = 0
     if dottype == "c":
         reflectioncell = 2 * dotlocation - focuscell           
     elif dottype == "r":
         reflectioncell = 2 * dotlocation - focuscell + 1
-        horiztweener = 0.5
+        tweener = 0.5
     elif dottype == "b":
         reflectioncell = 2 * dotlocation - focuscell + width
-        vertitweener = -0.5
     elif dottype == "d":
         reflectioncell = 2 * dotlocation - focuscell + width + 1
-        horiztweener = 0.5
-        vertitweener = -0.5
+        tweener = 0.5
+    if ((dotlocation % width) + tweener) < (focuscell % width):
+        if ((dotlocation % width) + tweener) < (reflectioncell % width):
+            return -1
+    elif ((dotlocation % width) + tweener) > (focuscell % width):
+        if ((dotlocation % width) + tweener) > (reflectioncell % width):
+            return -1
     if reflectioncell < 0 or reflectioncell >= area:
-        return -1
-    if ((dotlocation % width) + horiztweener) != ((focuscell % width) + (reflectioncell % width))/2:
-        return -1
-    if ((dotlocation // width) + vertitweener) != ((focuscell // width) + (reflectioncell // width))/2:
-        return -1
-    if regionsgrid[dotlocation] != regionsgrid[reflectioncell]:
         return -1
     return reflectioncell
 

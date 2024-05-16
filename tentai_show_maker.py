@@ -2,6 +2,8 @@ import random
 numregions = 0
 rcl = []                                        # regional cell list. contains all the cell positions of a given region.         
 outgrid = []
+sdelimcell = 0
+galaxymapticker = 1
 
 def genimage(width, height, outgrid):
     import datetime
@@ -79,61 +81,72 @@ def regionfill(cell):                           # acts like a paint bucket tool 
     return 0
 
 def singledoubleelim():                         # finds all regions of 1 or 2 cells and resolves them accordingly
+    global sdelimcell
+    global galaxymap
+    global galaxymapticker
     regionnumber = 0
-    cell = 0
     for regionnumber in range(1, numregions+1):
         regionarea = cellsinregion(regionnumber)
+        sdelimcell = 0
         # singles elim
         if regionarea == 1:
-            while regionnumber != regionsgrid[cell]:
-                cell += 1
-            if grid[cell] == 0:
-                outgrid[cell] = "c"
+            while regionnumber != regionsgrid[sdelimcell]:
+                sdelimcell += 1
+            if grid[sdelimcell] == 0:
+                outgrid[sdelimcell] = "c"
             else:
-                outgrid[cell] = "C"
-            regionsgrid[cell] = -1
+                outgrid[sdelimcell] = "C"
+            regionsgrid[sdelimcell] = -1
+            galaxymap[sdelimcell] = galaxymapticker
+            galaxymapticker += 1
         # doubles elim
         if regionarea == 2:
-            while regionnumber != regionsgrid[cell]:
-                cell += 1
-            if regionsgrid[cell] == regionsgrid[cell+1] and width != 1:
-                regionsgrid[cell] = -1
-                regionsgrid[cell+1] = -1
-                if grid[cell] == 0:
-                    outgrid[cell] = "r"
+            while regionnumber != regionsgrid[sdelimcell]:
+                sdelimcell += 1
+            if regionsgrid[sdelimcell] == regionsgrid[sdelimcell+1] and width != 1:
+                regionsgrid[sdelimcell] = -1
+                galaxymap[sdelimcell] = galaxymapticker
+                regionsgrid[sdelimcell+1] = -1
+                galaxymap[sdelimcell+1] = galaxymapticker
+                if grid[sdelimcell] == 0:
+                    outgrid[sdelimcell] = "r"
                 else:
-                    outgrid[cell] = "R"
-                outgrid[cell+1] = "."
+                    outgrid[sdelimcell] = "R"
+                outgrid[sdelimcell+1] = "."
             else:
-                regionsgrid[cell] = -1
-                regionsgrid[cell+width] = -1
-                if grid[cell] == 0:
-                    outgrid[cell] = "b"
+                regionsgrid[sdelimcell] = -1
+                galaxymap[sdelimcell] = galaxymapticker
+                regionsgrid[sdelimcell+width] = -1
+                galaxymap[sdelimcell+width] = galaxymapticker
+                if grid[sdelimcell] == 0:
+                    outgrid[sdelimcell] = "b"
                 else:
-                    outgrid[cell] = "B"
-                outgrid[cell+width] = "."
+                    outgrid[sdelimcell] = "B"
+                outgrid[sdelimcell+width] = "."
+            galaxymapticker += 1
     return 0
 
 def genreflection(dotlocation, dottype, focuscell):
-    tweener = 0
+    horiztweener = 0
+    vertitweener = 0
     if dottype == "c":
         reflectioncell = 2 * dotlocation - focuscell           
     elif dottype == "r":
         reflectioncell = 2 * dotlocation - focuscell + 1
-        tweener = 0.5
+        horiztweener = 0.5
     elif dottype == "b":
         reflectioncell = 2 * dotlocation - focuscell + width
+        vertitweener = -0.5
     elif dottype == "d":
         reflectioncell = 2 * dotlocation - focuscell + width + 1
-        tweener = 0.5
+        horiztweener = 0.5
+        vertitweener = -0.5
     if reflectioncell < 0 or reflectioncell >= area:
         return -1
-    if ((dotlocation % width) + tweener) < (focuscell % width):
-        if ((dotlocation % width) + tweener) < (reflectioncell % width):
-            return -1
-    elif ((dotlocation % width) + tweener) > (focuscell % width):
-        if ((dotlocation % width) + tweener) > (reflectioncell % width):
-            return -1
+    if ((dotlocation % width) + horiztweener) != ((focuscell % width) + (reflectioncell % width))/2:
+        return -1
+    if ((dotlocation // width) + vertitweener) != ((focuscell // width) + (reflectioncell // width))/2:
+        return -1
     if regionsgrid[dotlocation] != regionsgrid[reflectioncell]:
         return -1
     return reflectioncell
@@ -173,6 +186,8 @@ def placegalaxy():                              # places a "good" galaxy dot wit
     we don't actually check for whether the dot could reach all the squares in practice, and it speeds up computation a ton
     """
     global outgrid
+    global galaxymapticker
+    global galaxymap
     for focuscell in rcl:
         dottype = "c"
         dotscore = 0
@@ -211,12 +226,12 @@ def placegalaxy():                              # places a "good" galaxy dot wit
     maxscore = max(dotplacementscores)
     numcandidates = 0
     for dotscore in dotplacementscores:
-        if dotscore >= 0.6 * maxscore:
+        if dotscore >= 0.3 * maxscore:
             numcandidates += 1
     dotchoicecountdown = random.randrange(0, numcandidates)
     listticker = 0
     for dotscore in dotplacementscores:
-        if dotscore >= 0.6 * maxscore:
+        if dotscore >= 0.3 * maxscore:
             if dotchoicecountdown == 0:
                 dotcellchoice = rcl[listticker//4]
                 if listticker % 4 == 0:
@@ -276,7 +291,7 @@ def placegalaxy():                              # places a "good" galaxy dot wit
             expansioncell = seedcell - 1
             if regionsgrid[seedcell] == regionsgrid[expansioncell] and seedcell % width != 0 and outgrid[expansioncell] == "X":
                 expansioncellreflection = genreflection(dotcellchoice, dottypechoice, expansioncell)
-                if outgrid[expansioncellreflection] == "X":
+                if outgrid[expansioncellreflection] == "X" and regionsgrid[expansioncellreflection] == regionsgrid[dotcellchoice]:
                     outgrid[expansioncell] = "."
                     galaxycells.append(expansioncell)
                     outgrid[expansioncellreflection] = "."
@@ -287,7 +302,7 @@ def placegalaxy():                              # places a "good" galaxy dot wit
             if expansioncell < area:
                 if regionsgrid[seedcell] == regionsgrid[expansioncell] and expansioncell % width != 0 and outgrid[expansioncell] == "X":
                     expansioncellreflection = genreflection(dotcellchoice, dottypechoice, expansioncell)
-                    if outgrid[expansioncellreflection] == "X":
+                    if outgrid[expansioncellreflection] == "X" and regionsgrid[expansioncellreflection] == regionsgrid[dotcellchoice]:
                         outgrid[expansioncell] = "."
                         galaxycells.append(expansioncell)
                         outgrid[expansioncellreflection] = "."
@@ -297,7 +312,7 @@ def placegalaxy():                              # places a "good" galaxy dot wit
             expansioncell = seedcell - width
             if expansioncell >= 0 and regionsgrid[seedcell] == regionsgrid[expansioncell] and outgrid[expansioncell] == "X":
                 expansioncellreflection = genreflection(dotcellchoice, dottypechoice, expansioncell)
-                if outgrid[expansioncellreflection] == "X":
+                if outgrid[expansioncellreflection] == "X" and regionsgrid[expansioncellreflection] == regionsgrid[dotcellchoice]:
                     outgrid[expansioncell] = "."
                     galaxycells.append(expansioncell)
                     outgrid[expansioncellreflection] = "."
@@ -307,7 +322,7 @@ def placegalaxy():                              # places a "good" galaxy dot wit
             expansioncell = seedcell + width
             if expansioncell < area and regionsgrid[seedcell] == regionsgrid[expansioncell] and outgrid[expansioncell] == "X":
                 expansioncellreflection = genreflection(dotcellchoice, dottypechoice, expansioncell)
-                if outgrid[expansioncellreflection] == "X":
+                if outgrid[expansioncellreflection] == "X" and regionsgrid[expansioncellreflection] == regionsgrid[dotcellchoice]:
                     outgrid[expansioncell] = "."
                     galaxycells.append(expansioncell)
                     outgrid[expansioncellreflection] = "."
@@ -326,13 +341,22 @@ def placegalaxy():                              # places a "good" galaxy dot wit
             regionsgrid[pointer] = 0
         else:
             regionsgrid[pointer] = -1
+            galaxymap[pointer] = galaxymapticker
+    galaxymapticker += 1
     for pointer in rcl:
         regionfill(pointer)
+    print("Regions:")               # uncomment if you want to print initial region fills
+    for i in range(0, height):
+        for j in range(0, width):
+            outnum = regionsgrid[i*width+j]
+            print("{:02d}".format(outnum), end=" ")
+        print()
+    print()
     return 0                            # ...and get out
 
 dimensions = "0x0"
 while dimensions == "0x0":
-    dimensions = input("Input the dimensions of the puzzle (e.g. 15x5): ")
+    dimensions = "9x9"
     invalid = 0
     heightswitch = 0
     widthstr = ""
@@ -362,7 +386,7 @@ area = width * height
 grid = []
 while grid == []:
     print("Input the grid as a continuous string of", area, "1s and 0s:")
-    rawgrid = input("")
+    rawgrid = "111111111111111111111111111111111111111111111111111111111111111111111111111111111"
     invalid = 0
     i = 0
     for char in rawgrid:
@@ -379,12 +403,14 @@ while grid == []:
         for char in rawgrid:
             grid.append(int(char))
 
+galaxymap = []
 outgrid = ["X"]
 regionsgrid = [0]               # regionsgrid initially starts as a field of zeroes,
 for i in range(0, area-1):      # but then fills in according to flush regions of black/white starting at index 1;
     outgrid.append("X")         # if a cell is definitively assigned to a star, its region is set to -1
     regionsgrid.append(0)
 for pointer in range(0, area):  # get initial region fills
+    galaxymap.append(0)
     if regionsgrid[pointer] == 0:
         regionfill(pointer)
 """
@@ -396,6 +422,19 @@ for i in range(0, height):
     print()
 print()
 """
+def elimgalaxy(cell):       # given a cell, we wipe the whole galaxy associated with it
+    global outgrid
+    global regionsgrid
+    if galaxymap[cell] == 0:
+        return 0
+    else:
+        rottengalaxy = galaxymap[cell]
+        for pointer in range(0, area):
+            if galaxymap[pointer] == rottengalaxy:
+                outgrid[pointer] = "X"
+                regionsgrid[pointer] = 0
+                galaxymap[pointer] = 0
+
 """
 to avoid puzzles which are too difficult, or which have multiple solutions, a solver is included here
 once the puzzle is generated, it will be fed in, and then adjusted if insoluble
@@ -448,27 +487,32 @@ def updatesolves():
 def reflection(dotnumber, focuscell):           # returns the 180° rotation of a given cell and around its respective dot
     dotlocation = galaxytypes[2*dotnumber]
     dottype = galaxytypes[2*dotnumber+1]
-    tweener = 0
+    horiztweener = 0
+    vertitweener = 0
     if dottype == "c":
         reflectioncell = 2 * dotlocation - focuscell           
     elif dottype == "r":
         reflectioncell = 2 * dotlocation - focuscell + 1
-        tweener = 0.5                           # tweener accounts for half-squares when we check for horizontal offset
+        horiztweener = 0.5                           # tweener accounts for half-squares when we check for horizontal offset
     elif dottype == "b":
         reflectioncell = 2 * dotlocation - focuscell + width
+        vertitweener = -0.5
     elif dottype == "d":
         reflectioncell = 2 * dotlocation - focuscell + width + 1
-        tweener = 0.5
+        horiztweener = 0.5
+        vertitweener = -0.5
     # now check whether our reflection answer makes sense, or if it bonked into a puzzle boundary or solved cell
     # if it bonked, then return -1 instead of a valid cell
     if reflectioncell < 0 or reflectioncell >= area:                            # for ceiling & floor
         return -1
-    if ((dotlocation % width) + tweener) < (focuscell % width):                 # for walls
-        if ((dotlocation % width) + tweener) < (reflectioncell % width):
-            return -1
-    elif ((dotlocation % width) + tweener) > (focuscell % width):
-        if ((dotlocation % width) + tweener) > (reflectioncell % width):
-            return -1   # essentially, we ask "are the original cell and the reflection on the same side of the dot?"
+    if reflectioncell < 0 or reflectioncell >= area:                            # for walls
+        return -1
+    if ((dotlocation % width) + horiztweener) != ((focuscell % width) + (reflectioncell % width))/2:
+        return -1
+    if ((dotlocation // width) + vertitweener) != ((focuscell // width) + (reflectioncell // width))/2:
+        return -1
+    if regionsgrid[dotlocation] != regionsgrid[reflectioncell]:
+        return -1
     if solvedgrid[reflectioncell] != "X":                                       # for solved cells
         return -1
     return reflectioncell
@@ -527,39 +571,50 @@ def attemptsolve():
         return 1
     else:   # "errm..... well this is awkward....... ur puzzle too Bad, couldn't solve.."
         print("Puzzle was generated, but no solution was found. Retrying...")
-        for unsolvedgalaxy in unsolvedgalaxies:
-            for pointer in solvedgrid:
-                if pointer == unsolvedgalaxy:
-                    outgrid[pointer] = "X"
-                    regionsgrid[pointer] = 0
-        for pointer in solvedgrid:
-            if pointer == "X":
-                outgrid[pointer] = "X"
-                regionsgrid[pointer] = 0
+        for pointer in range(0, area):      # this is why we kept track using galaxymap
+            if solvedgrid[pointer] == "X":
+                elimgalaxy(pointer)
+        for pointer in range(0,area):
+            if regionsgrid[pointer] == 0:
+                regionfill(pointer)
         return 0
 """
 end solver code, begin generator code
 """
 
-singledoubleelim()              # start creating puzzle by sweeping for singletons & 1x2s
+singledoubleelim()                                      # start creating puzzle by sweeping for singletons & 1x2s
 puzzlefinished = 0
-pointer = 0
 while puzzlefinished == 0:
-    while regionsgrid[pointer] < 1:
-        pointer += 1            # find a region to focus on resolving
-        if pointer == area:
-            regionsgrid.append(999)
-    if pointer == area:         # if none was found, make sure the puzzle is solvable
-        regionsgrid.pop(area)
-        if attemptsolve() == 0: # unsolvable puzzle? regenerate regions and keep generating galaxies
-            for pointer in range(0, area):
-                if regionsgrid[pointer] == 0:
-                    regionfill(pointer)
+    pointer = 0
+    regionfound = 0
+    while regionfound == 0 and pointer < area:
+        if regionsgrid[pointer] > 0:
+            regionfound = 1
+            regiontofill = regionsgrid[pointer]
+        pointer += 1                                    # find a region to focus on resolving
+    if regionfound == 0:                                # if none was found, make sure the puzzle is solvable
+        if "X" in outgrid:
+            puzzlefinished = 0
+            print("err")
         else:
-            puzzlefinished = 1
-    else:                       # if an unresolved region was found, place a galaxy there
-        focusregion = regionsgrid[pointer]
-        getregionalcells(focusregion)
+            if attemptsolve() == 0: # unsolvable puzzle? place a singleton, regenerate regions, and keep generating galaxies
+                pointer = 0
+                while regionsgrid[pointer] < 0:         # randomly place a singleton
+                    pointer += 1
+                getregionalcells(regionsgrid[pointer])
+                singletonpos = random.randrange(0, len(rcl))
+                pointer = rcl[singletonpos]
+                regionsgrid[pointer] = -1
+                galaxymap[singletonpos] = galaxymapticker
+                galaxymapticker += 1
+                if grid[pointer] == 0:
+                    outgrid[pointer] = "c"
+                else:
+                    outgrid[pointer] = "C"
+            else:
+                puzzlefinished = 1
+    else:                                               # if an unresolved region was found, place a galaxy there
+        getregionalcells(regiontofill)
         placegalaxy()
         singledoubleelim()
 

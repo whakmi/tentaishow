@@ -1,5 +1,8 @@
 import random
+import sys
+sys.setrecursionlimit(1500)
 numregions = 0
+numcandidates = 3                               # change this for more or less optimization for larger galaxies
 rcl = []                                        # regional cell list. contains all the cell positions of a given region.         
 outgrid = []
 sdelimcell = 0
@@ -50,34 +53,36 @@ def regionfill(cell):                           # acts like a paint bucket tool 
         if regionsgrid[cell] == 0:              # if the cell doesn't already belong to a region, make a new region
             numregions += 1
             regionsgrid[cell] = numregions
-        # check for available cell left
-        chkcell = cell - 1
-        if cell % width != 0:
-            chkcellcontent = regionsgrid[chkcell]
-            if chkcellcontent == 0 and grid[cell] == grid[chkcell]:
-                regionsgrid[chkcell] = regionsgrid[cell]
-                regionfill(chkcell)
-        # check for available cell right
-        chkcell = cell + 1
-        if chkcell % width != 0:
-            chkcellcontent = regionsgrid[chkcell]
-            if chkcellcontent == 0 and grid[cell] == grid[chkcell]:
-                regionsgrid[chkcell] = regionsgrid[cell]
-                regionfill(chkcell)
-        # check for available cell up
-        chkcell = cell - width
-        if chkcell >= 0:
-            chkcellcontent = regionsgrid[chkcell]
-            if chkcellcontent == 0 and grid[cell] == grid[chkcell]:
-                regionsgrid[chkcell] = regionsgrid[cell]
-                regionfill(chkcell)
-        # check for available cell down
-        chkcell = cell + width
-        if chkcell < area:
-            chkcellcontent = regionsgrid[chkcell]
-            if chkcellcontent == 0 and grid[cell] == grid[chkcell]:
-                regionsgrid[chkcell] = regionsgrid[cell]
-                regionfill(chkcell)
+        getregionalcells(regionsgrid[cell])
+        if len(rcl) < 100:
+            # check for available cell left
+            chkcell = cell - 1
+            if cell % width != 0:
+                chkcellcontent = regionsgrid[chkcell]
+                if chkcellcontent == 0 and grid[cell] == grid[chkcell]:
+                    regionsgrid[chkcell] = regionsgrid[cell]
+                    regionfill(chkcell)
+            # check for available cell right
+            chkcell = cell + 1
+            if chkcell % width != 0:
+                chkcellcontent = regionsgrid[chkcell]
+                if chkcellcontent == 0 and grid[cell] == grid[chkcell]:
+                    regionsgrid[chkcell] = regionsgrid[cell]
+                    regionfill(chkcell)
+            # check for available cell up
+            chkcell = cell - width
+            if chkcell >= 0:
+                chkcellcontent = regionsgrid[chkcell]
+                if chkcellcontent == 0 and grid[cell] == grid[chkcell]:
+                    regionsgrid[chkcell] = regionsgrid[cell]
+                    regionfill(chkcell)
+            # check for available cell down
+            chkcell = cell + width
+            if chkcell < area:
+                chkcellcontent = regionsgrid[chkcell]
+                if chkcellcontent == 0 and grid[cell] == grid[chkcell]:
+                    regionsgrid[chkcell] = regionsgrid[cell]
+                    regionfill(chkcell)
     return 0
 
 def singledoubleelim():                         # finds all regions of 1 or 2 cells and resolves them accordingly
@@ -85,7 +90,12 @@ def singledoubleelim():                         # finds all regions of 1 or 2 ce
     global galaxymap
     global galaxymapticker
     regionnumber = 0
-    for regionnumber in range(1, numregions+1):
+    activeregions = []
+    for pointer in range(0, area):              # look to see which regions are currently active
+        if regionsgrid[pointer] >= 0:
+            if regionsgrid[pointer] in activeregions:
+                activeregions.append(regionsgrid[pointer])
+    for regionnumber in activeregions:
         regionarea = cellsinregion(regionnumber)
         sdelimcell = 0
         # singles elim
@@ -182,7 +192,8 @@ def placegalaxy():                              # places a "good" galaxy dot wit
     # the default is 15, but can be increased to optimize for bigger galaxies
     # rewrite everything below this, hehe
     dotcandidates = []
-    for i in range(0, 15):
+    global numcandidates
+    for i in range(0, 10):
         dotcandidates.append(random.choice(validdotslist))
     # the dot's location is given by integer division by 4, and the type is given by a modulo 4 operation
     winninggalaxycells = []
@@ -234,6 +245,10 @@ def placegalaxy():                              # places a "good" galaxy dot wit
                 if expandcell < area:
                     if regionsgrid[expandcell] == regionsgrid[seedcell]:
                         validexpansion = 1
+            if expandcell >= area:
+                validexpansion = 0
+            elif grid[expandcell] != grid[seedcell]:
+                validexpansion = 0
             if expandcell in galaxybuffercells:
                 validexpansion = 0                          # don't expand into a cell that the galaxy already owns
             if validexpansion == 1:
@@ -243,14 +258,13 @@ def placegalaxy():                              # places a "good" galaxy dot wit
                 else:
                     if regionsgrid[expansionrefl] != regionsgrid[seedcell] or galaxymap[expansionrefl] != galaxymap[seedcell]:
                         validexpansion = 0
-            if expandcell >= area:
-                validexpansion = 0
+            
             if validexpansion == 1:
                 galaxybuffercells.append(expandcell)
                 galaxybuffercells.append(expansionrefl)
                 galaxysize = len(galaxybuffercells)
             expattempts += 1
-            if galaxysize >= 0.18 * area or expattempts >= 800:
+            if galaxysize >= 0.18 * area or expattempts >= 500:
                 stopgen = 1
                 expattempts = 0
         # if the galaxy we just generated is bigger than the current winning galaxy, it will overwrite the previous one
@@ -348,7 +362,7 @@ print()
 def elimgalaxy(cell):       # given a cell, we wipe the whole galaxy associated with it
     global outgrid
     global regionsgrid
-    if galaxymap[cell] == 0:
+    if galaxymap[cell] == 0 or cell in fixedcells:
         return 0
     else:
         rottengalaxy = galaxymap[cell]
@@ -363,6 +377,8 @@ to avoid puzzles which are too difficult, or which have multiple solutions, a so
 once the puzzle is generated, it will be fed in, and then adjusted if insoluble
 """
 unsolvedgalaxies = []
+solvedgalaxies = []         # theoretically, if a cell from a galaxy enters solvedgalaxies, it should never be altered
+fixedcells = []             # ...so we put it in the fixedcells list
 galaxytypes = ["X", "X"]
 """
 the galaxytypes list:
@@ -371,6 +387,9 @@ the first dot is numbered 1, so this makes it convenient to call dot #x's locati
 """
 def updatesolves():
     global unsolvedgalaxies
+    global solvedgalaxies
+    global fixedcells
+    global regionsgrid
     chkcell = 0
     galaxiestoremove = []
     for focusgalaxy in unsolvedgalaxies:
@@ -405,6 +424,12 @@ def updatesolves():
     for galaxy in galaxiestoremove:
         unsolvedgalaxies.remove(galaxy)
         # remove all the solved galaxies so that we don't check them again
+        solvedgalaxies.append(galaxy)
+    # put all cells from solved galaxies into the fixedcell list so that they never get overwritten
+    for pointer in range(0, area):
+        if solvedgrid[pointer] in solvedgalaxies and pointer not in solvedgalaxies:
+            fixedcells.append(pointer)
+            regionsgrid[pointer] = -1
     return 0
 
 def reflection(dotnumber, focuscell):           # returns the 180° rotation of a given cell and around its respective dot
@@ -507,6 +532,7 @@ end solver code, begin generator code
 
 singledoubleelim()                                      # start creating puzzle by sweeping for singletons & 1x2s
 puzzlefinished = 0
+singletonlist = []                                      # the additional singletons which should make the puzzle more possible
 while puzzlefinished == 0:
     pointer = 0
     regionfound = 0
@@ -520,20 +546,25 @@ while puzzlefinished == 0:
             puzzlefinished = 0
             print("err")
         else:
-            if attemptsolve() == 0: # unsolvable puzzle? place a singleton, regenerate regions, and keep generating galaxies
+            if 1 == 0:  # replace "1" with "attemptsolve()" if you want to enable the solver check that seems to break everything
                 pointer = 0
-                while regionsgrid[pointer] < 0:         # randomly place a singleton
-                    pointer += 1
-                getregionalcells(regionsgrid[pointer])
-                singletonpos = random.randrange(0, len(rcl))
-                pointer = rcl[singletonpos]
-                regionsgrid[pointer] = -1
-                galaxymap[singletonpos] = galaxymapticker
-                galaxymapticker += 1
-                if grid[pointer] == 0:
-                    outgrid[pointer] = "c"
-                else:
-                    outgrid[pointer] = "C"
+                try:    # unsolvable puzzle? place a singleton, regenerate regions, and keep generating galaxies
+                    while regionsgrid[pointer] < 0:     # randomly place a new singleton
+                        pointer += 1
+                    getregionalcells(regionsgrid[pointer])
+                    singletonlist.append(random.randrange(0, len(rcl)))
+                    for cell in singletonlist:
+                        fixedcells.append(cell)
+                        galaxymap[cell] = galaxymapticker
+                        galaxymapticker += 1
+                        if grid[pointer] == 0:
+                            outgrid[pointer] = "c"
+                        else:
+                            outgrid[pointer] = "C"
+                except:
+                    pass
+                if numcandidates > 1:                   # reduce the number of candidates to speed up generation
+                    numcandidates -= 1                  # by making less "good" galaxies
             else:
                 puzzlefinished = 1
     else:                                               # if an unresolved region was found, place a galaxy there
@@ -547,6 +578,15 @@ for i in range(0, height):
         outchar = outgrid[i*width+j]
         print(outchar, end="")
     print()
+
+"""
+print("Finished galaxies:")                             # uncomment this if you want to see the solution
+for i in range(0, height):
+    for j in range(0, width):
+        outchar = galaxymap[i*width+j]
+        print("{:02d}".format(outchar), end=" ")
+    print()
+"""
 
 jaodernein = input("Want a copy of the grid as an image? (It will be saved to the same folder as this program.) Y/N: ")
 jaoderneinalnum = ""
